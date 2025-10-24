@@ -1,0 +1,18 @@
+# Ceremony files
+ceremony/
+contributions/
+proving-keys/
+contribution_*/
+
+# URLs and credentials
+*_urls.json
+*.key
+*.pem
+
+# Binary
+semaphore-mtb-setup/semaphore-mtb-setup
+
+# Temp files
+*.tmp
+*.log
+.DS_Store

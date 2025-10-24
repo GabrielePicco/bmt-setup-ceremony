@@ -1,0 +1,3 @@
+[submodule "semaphore-mtb-setup"]
+	path = semaphore-mtb-setup
+	url = https://github.com/Lightprotocol/semaphore-mtb-setup.git
