@@ -16,3 +16,6 @@ semaphore-mtb-setup/semaphore-mtb-setup
 *.tmp
 *.log
 .DS_Store
+
+service-account-key.json
+**/service-account-key.json

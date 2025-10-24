@@ -4,17 +4,17 @@
 
 1. Receive `contribution_urls.json` from coordinator
 2. Run:
+
 ```bash
 cd contributor
 ./contribute.sh contribution_urls.json
 ```
-3. When you're done, delete the files and wipe RAM — eg by shutting down machine and disconnecting from power.
 
+3. When you're done, delete the files and wipe RAM — eg by shutting down machine and disconnecting from power.
 
 ### How to verify existing contributions
 
-*tba
-
+\*tba
 
 ### For Coordinators
 
@@ -101,6 +101,7 @@ contributor/
 ## Circuits
 
 - **89 total circuits**
+
   - V1: 30 circuits (tree height 26)
   - V2: 56 circuits (tree heights 32/40)
   - Batch: 3 circuits (batch operations)
@@ -112,10 +113,12 @@ contributor/
 ## Dependencies
 
 **Coordinator:**
+
 - `light-prover` binary (for R1CS generation)
 - `python3` with `google-cloud-storage`
 - `gsutil` for GCS operations
 
 **Contributor:**
+
 - `jq` (auto-installed if missing)
 - `go` (to build semaphore-mtb-setup)
