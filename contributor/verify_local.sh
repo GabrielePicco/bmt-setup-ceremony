@@ -13,7 +13,6 @@ EXPECTED_HASHES_FILE="${3:-}"
 VERIF_LOG="${VERIF_LOG:-$SCRIPT_DIR/verification_hashes.txt}"
 
 if [[ -z "$VERIFY_DIR" ]]; then
-  # Pick the latest contribution workspace by timestamp in the contributor folder
   latest_dir=$(ls -d "$SCRIPT_DIR"/ceremony_contribution_* 2>/dev/null | sort | tail -1 || true)
   if [[ -z "${latest_dir:-}" ]]; then
     echo "Error: No contribution workspace found under $SCRIPT_DIR/ceremony_contribution_*"
@@ -24,7 +23,6 @@ if [[ -z "$VERIFY_DIR" ]]; then
 fi
 
 if [[ -z "$SEMAPHORE_BIN" ]]; then
-  # Prefer repo binary; fall back to contribution's built binary
   if [[ -f "$ROOT_DIR/semaphore-mtb-setup/semaphore-mtb-setup" ]]; then
     SEMAPHORE_BIN="$ROOT_DIR/semaphore-mtb-setup/semaphore-mtb-setup"
   elif [[ -f "${latest_dir:-}/semaphore-mtb-setup/semaphore-mtb-setup" ]]; then
@@ -52,7 +50,6 @@ echo ""
 total=0
 failed=0
 
-# Initialize verification log (per-circuit hashes of verified inputs)
 {
   echo "Verification Hashes"
   echo "Date: $(date -u)"
@@ -82,7 +79,6 @@ for ver in v1 v2 batch; do
       failed=$((failed + 1))
     fi
 
-    # Compute per-circuit SHA256 of the verified contribution file for manual comparison
     if command -v shasum >/dev/null 2>&1; then
       file_sha=$(shasum -a 256 "$f" | awk '{print $1}')
     elif command -v sha256sum >/dev/null 2>&1; then
@@ -98,7 +94,6 @@ done
 echo ""
 echo "Verified: $((total - failed))/$total circuits"
 
-# Show verification log digest for sharing/comparison
 if command -v shasum >/dev/null 2>&1; then
   verif_log_sha=$(shasum -a 256 "$VERIF_LOG" | awk '{print $1}')
 elif command -v sha256sum >/dev/null 2>&1; then
@@ -110,7 +105,6 @@ echo ""
 echo "Verification log: $VERIF_LOG"
 echo "SHA256(verification_hashes.txt): $verif_log_sha"
 
-# Also show the contribution hashes file digest if present
 hash_file_candidate=$(ls "$SCRIPT_DIR"/ceremony_contribution_*/output/contribution_hashes.txt 2>/dev/null | sort | tail -1 || true)
 if [[ -f "${hash_file_candidate:-}" ]]; then
   if command -v shasum >/dev/null 2>&1; then
@@ -124,15 +118,12 @@ if [[ -f "${hash_file_candidate:-}" ]]; then
   echo "Hashes file: $hash_file_candidate"
   echo "SHA256(contribution_hashes.txt): $hash_sha"
 
-  # Optional per-circuit comparison with an expected attestation file
   if [[ -n "${EXPECTED_HASHES_FILE}" ]] && [[ -f "${EXPECTED_HASHES_FILE}" ]]; then
     echo ""
     echo "Per-circuit attestation comparison vs: $EXPECTED_HASHES_FILE"
     tmp_dir=$(mktemp -d)
-    # Normalize to "name hash" format and sort by name
     awk -F": " '/: /{print $1" "$2}' "$hash_file_candidate" | LC_ALL=C sort > "$tmp_dir/local.txt"
     awk -F": " '/: /{print $1" "$2}' "$EXPECTED_HASHES_FILE" | LC_ALL=C sort > "$tmp_dir/exp.txt"
-    # Join by name; show name, local, expected (MISSING when absent)
     join -a1 -a2 -e MISSING -o 0,1.2,2.2 "$tmp_dir/local.txt" "$tmp_dir/exp.txt" | while read -r name lh eh; do
       if [[ "$lh" = "MISSING" ]]; then
         echo "ONLY_EXPECTED: $name -> expected=$eh"

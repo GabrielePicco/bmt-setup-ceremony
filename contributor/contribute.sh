@@ -8,13 +8,12 @@ URLS_FILE="${1:-}"
 WORK_DIR="./ceremony_contribution_$(date +%s)"
 SEMAPHORE_REPO="https://github.com/lightprotocol/semaphore-mtb-setup.git"
 SEMAPHORE_DIR="$WORK_DIR/semaphore-mtb-setup"
-# Optional pin (tag, branch, commit). Set SEMAPHORE_REF env var to pin supply chain.
 SEMAPHORE_REF="${SEMAPHORE_REF:-}"
 
 [[ -z "$URLS_FILE" ]] && echo "Usage: $0 <urls.json>" && exit 1
 [[ ! -f "$URLS_FILE" ]] && echo "Error: $URLS_FILE not found" && exit 1
 
-# Check dependencies
+
 check_dependencies() {
     local missing=()
 
@@ -34,7 +33,6 @@ check_dependencies() {
     fi
 }
 
-# Process a single version
 process_version() {
     local version="$1"
     local download_section="$2"
@@ -43,12 +41,10 @@ process_version() {
     echo " Processing Version: $version"
     echo ""
 
-    # Download files for this version
     echo "Downloading previous contribution ($version)..."
     while IFS='|' read -r filename url; do
         echo "  Downloading $filename"
 
-        # Retry download up to 10 times with exponential backoff
         retry=0
         max_retries=10
         while [[ $retry -lt $max_retries ]]; do
@@ -77,7 +73,6 @@ process_version() {
         done
     done < <(echo "$download_section" | jq -r 'to_entries[] | "\(.key)|\(.value)"')
 
-    # Contribute to circuits
     echo ""
     echo "Adding your contribution to $version circuits..."
     echo ""
@@ -118,7 +113,6 @@ process_version() {
     echo ""
     echo "Contributed to $circuit_count $version circuits"
 
-    # Upload contribution
     echo ""
     echo "Uploading $version contribution..."
     upload_count=0
@@ -163,11 +157,9 @@ process_version() {
         upload_count=$((upload_count + 1))
     done < <(echo "$upload_section" | jq -r 'to_entries[] | "\(.key)|\(.value)"')
 
-    # Preserve inputs for offline verification, then clean up downloads for this version
     mkdir -p "$WORK_DIR/verify_inputs/$version"
     cp "$WORK_DIR"/download/*.ph2 "$WORK_DIR/verify_inputs/$version"/ 2>/dev/null || true
     cp "$WORK_DIR"/download/*.evals "$WORK_DIR/verify_inputs/$version"/ 2>/dev/null || true
-    # Clean up downloaded files for this version
     rm -f "$WORK_DIR"/download/*
 
     echo ""
@@ -175,17 +167,14 @@ process_version() {
     echo ""
 }
 
-# Main ceremony contribution
 main() {
     echo "========================================="
     echo "BMT Trusted Setup Ceremony for ZK Compression"
     echo "========================================="
     echo ""
 
-    # Check dependencies
     check_dependencies
 
-    # Parse contribution info
     CONTRIBUTOR=$(jq -r '.contributor' "$URLS_FILE")
     CONTRIBUTION_ID=$(jq -r '.contribution_id' "$URLS_FILE")
 
@@ -193,11 +182,9 @@ main() {
     echo "Contribution ID: $CONTRIBUTION_ID"
     echo ""
 
-    # Setup work directory
     echo "Setting up workspace..."
     mkdir -p "$WORK_DIR"/{download,output}
 
-    # Clone and build semaphore-mtb-setup
     echo "Preparing ceremony tools..."
     git clone --quiet --depth 1 "$SEMAPHORE_REPO" "$SEMAPHORE_DIR"
     if [[ -n "$SEMAPHORE_REF" ]]; then
@@ -214,7 +201,6 @@ main() {
     }
     SEMAPHORE_BIN="$SEMAPHORE_DIR/semaphore-mtb-setup"
 
-    # Initialize hash file
     hash_file="$WORK_DIR/output/contribution_hashes.txt"
     {
         echo "Contribution: $CONTRIBUTION_ID"
@@ -224,9 +210,7 @@ main() {
         echo "Circuit contributions:"
     } > "$hash_file"
 
-    # Check if this is a multi-version file
     if jq -e '.versions' "$URLS_FILE" >/dev/null 2>&1; then
-        # Process each version
         version_count=$(jq '.versions | length' "$URLS_FILE")
         for ((i=0; i<version_count; i++)); do
             version=$(jq -r ".versions[$i].version" "$URLS_FILE")
@@ -270,19 +254,16 @@ main() {
             done
         done < <(jq -r '.download | to_entries[] | "\(.key)|\(.value)"' "$URLS_FILE")
 
-        # Preserve inputs for offline verification
         mkdir -p "$WORK_DIR/verify_inputs"
         cp "$WORK_DIR"/download/*.ph2 "$WORK_DIR/verify_inputs"/ 2>/dev/null || true
         cp "$WORK_DIR"/download/*.evals "$WORK_DIR/verify_inputs"/ 2>/dev/null || true
 
-        # Contribute to each circuit
         echo ""
         echo "Adding your contribution to circuits..."
         echo "This may take from several minutes to several hours depending on your machine."
         echo "Please be patient and do not interrupt the process."
         echo ""
 
-        # Process each .ph2 file
         circuit_count=0
         for ph2_file in "$WORK_DIR"/download/*.ph2; do
             [[ ! -f "$ph2_file" ]] && continue
@@ -291,7 +272,7 @@ main() {
             # Remove _0000 suffix (for init files) or _contributor_contribution_num (for previous contributions)
             circuit=$(echo "$base" | sed -E 's/(_0000|_[^_]+_contribution_[0-9]+)$//')
 
-            # Generate output filename
+
             num=$(echo "$CONTRIBUTION_ID" | cut -d'_' -f1)
             output_file="$WORK_DIR/output/${circuit}_${CONTRIBUTOR}_contribution_${num}.ph2"
 
@@ -324,7 +305,7 @@ main() {
         echo "Contributed to $circuit_count circuits"
         echo ""
 
-        # Upload contribution
+
         echo "Uploading your contribution..."
         upload_count=0
         while IFS='|' read -r filename url; do
@@ -338,7 +319,6 @@ main() {
             
             echo "  Uploading $filename ($(du -h "$local_file" | cut -f1))"
 
-            # Retry upload up to 10 times with exponential backoff
             retry=0
             max_retries=10
             while [[ $retry -lt $max_retries ]]; do
@@ -384,7 +364,7 @@ main() {
     echo "   - Upload the file as a GitHub Gist and share the link"
     echo "   - Or open a PR to add it under attestations/<contribution_id> in this repo"
     echo "   - Or publish the SHA256 of the file: shasum -a 256 $hash_file"
-    # Print SHA256 of the hashes file for easy attestation
+
     if command -v shasum >/dev/null 2>&1; then
         hash_sha=$(shasum -a 256 "$hash_file" | awk '{print $1}')
         echo "SHA256(contribution_hashes.txt): $hash_sha"
@@ -397,5 +377,4 @@ main() {
     echo "Thank you for contributing to ZK Compression on Solana!"
 }
 
-# Run main function
 main
