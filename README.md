@@ -10,6 +10,12 @@ cd contributor
 ```
 3. When you're done, delete the files and wipe RAM — eg by shutting down machine and disconnecting from power
 
+
+### How to verify contributions
+
+*tba
+
+
 ### For Coordinators
 
 #### 1. Initial Setup
