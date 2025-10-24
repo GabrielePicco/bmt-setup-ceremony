@@ -8,6 +8,8 @@ URLS_FILE="${1:-}"
 WORK_DIR="./ceremony_contribution_$(date +%s)"
 SEMAPHORE_REPO="https://github.com/lightprotocol/semaphore-mtb-setup.git"
 SEMAPHORE_DIR="$WORK_DIR/semaphore-mtb-setup"
+# Optional pin (tag, branch, commit). Set SEMAPHORE_REF env var to pin supply chain.
+SEMAPHORE_REF="${SEMAPHORE_REF:-}"
 
 [[ -z "$URLS_FILE" ]] && echo "Usage: $0 <urls.json>" && exit 1
 [[ ! -f "$URLS_FILE" ]] && echo "Error: $URLS_FILE not found" && exit 1
@@ -161,6 +163,10 @@ process_version() {
         upload_count=$((upload_count + 1))
     done < <(echo "$upload_section" | jq -r 'to_entries[] | "\(.key)|\(.value)"')
 
+    # Preserve inputs for offline verification, then clean up downloads for this version
+    mkdir -p "$WORK_DIR/verify_inputs/$version"
+    cp "$WORK_DIR"/download/*.ph2 "$WORK_DIR/verify_inputs/$version"/ 2>/dev/null || true
+    cp "$WORK_DIR"/download/*.evals "$WORK_DIR/verify_inputs/$version"/ 2>/dev/null || true
     # Clean up downloaded files for this version
     rm -f "$WORK_DIR"/download/*
 
@@ -194,6 +200,13 @@ main() {
     # Clone and build semaphore-mtb-setup
     echo "Preparing ceremony tools..."
     git clone --quiet --depth 1 "$SEMAPHORE_REPO" "$SEMAPHORE_DIR"
+    if [[ -n "$SEMAPHORE_REF" ]]; then
+        (cd "$SEMAPHORE_DIR" && git fetch --quiet --depth 1 origin "$SEMAPHORE_REF" && git checkout --quiet "$SEMAPHORE_REF") || {
+            echo "Error: Failed to checkout semaphore-mtb-setup ref: $SEMAPHORE_REF"
+            echo "Please cleanup the workspace and restart the entire process afterwards. If the issues persist, please contact the coordinator. Clean up via: rm -rf $WORK_DIR"
+            exit 1
+        }
+    fi
     (cd "$SEMAPHORE_DIR" && go build -o semaphore-mtb-setup .) || {
         echo "Error: Failed to build semaphore-mtb-setup"
         echo "Please cleanup the workspace and restart the entire process afterwards. If the issues persist, please contact the coordinator. Clean up via: rm -rf $WORK_DIR"
@@ -256,6 +269,11 @@ main() {
                 fi
             done
         done < <(jq -r '.download | to_entries[] | "\(.key)|\(.value)"' "$URLS_FILE")
+
+        # Preserve inputs for offline verification
+        mkdir -p "$WORK_DIR/verify_inputs"
+        cp "$WORK_DIR"/download/*.ph2 "$WORK_DIR/verify_inputs"/ 2>/dev/null || true
+        cp "$WORK_DIR"/download/*.evals "$WORK_DIR/verify_inputs"/ 2>/dev/null || true
 
         # Contribute to each circuit
         echo ""
@@ -359,6 +377,23 @@ main() {
     echo ""
     cat "$hash_file"
     echo ""
+    echo "Attestation instructions:"
+    echo "1) Save the file above: $hash_file"
+    echo "2) Keep a local copy in a safe place"
+    echo "3) Optionally publish a public attestation (choose one):"
+    echo "   - Upload the file as a GitHub Gist and share the link"
+    echo "   - Or open a PR to add it under attestations/<contribution_id> in this repo"
+    echo "   - Or publish the SHA256 of the file: shasum -a 256 $hash_file"
+    # Print SHA256 of the hashes file for easy attestation
+    if command -v shasum >/dev/null 2>&1; then
+        hash_sha=$(shasum -a 256 "$hash_file" | awk '{print $1}')
+        echo "SHA256(contribution_hashes.txt): $hash_sha"
+    elif command -v sha256sum >/dev/null 2>&1; then
+        hash_sha=$(sha256sum "$hash_file" | awk '{print $1}')
+        echo "SHA256(contribution_hashes.txt): $hash_sha"
+    fi
+    echo ""
+    echo "Offline verification inputs saved in: $WORK_DIR/verify_inputs"
     echo "Thank you for contributing to ZK Compression on Solana!"
 }
 

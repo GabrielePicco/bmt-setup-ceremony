@@ -19,3 +19,7 @@ semaphore-mtb-setup/semaphore-mtb-setup
 
 service-account-key.json
 **/service-account-key.json
+
+# Public attestations allowlist
+# Do not ignore the folder itself so contributors can PR their hash files
+!attestations/**
