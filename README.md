@@ -50,10 +50,6 @@ HASH_FILE=contributor/ceremony_contribution_*/output/contribution_hashes.txt
 shasum -a 256 $HASH_FILE
 ```
 
-### How to verify existing contributions
-
-\*tba
-
 ### For Coordinators
 
 #### 1. Initial Setup
