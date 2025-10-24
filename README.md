@@ -8,10 +8,10 @@
 cd contributor
 ./contribute.sh contribution_urls.json
 ```
-3. When you're done, delete the files and wipe RAM — eg by shutting down machine and disconnecting from power
+3. When you're done, delete the files and wipe RAM — eg by shutting down machine and disconnecting from power.
 
 
-### How to verify contributions
+### How to verify existing contributions
 
 *tba
 
