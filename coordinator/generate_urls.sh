@@ -211,8 +211,6 @@ echo "Generating download URLs..."
         filename=$(basename "$file")
         [[ "$filename" == "*.ph2" ]] && continue  # Skip glob pattern if no files
 
-        evals_file="${filename%.ph2}.evals"
-
         # Add comma if not first entry
         [[ "$FIRST" == "false" ]] && echo ","
         FIRST=false
@@ -220,23 +218,6 @@ echo "Generating download URLs..."
         # Generate and add download URLs
         ph2_url=$(generate_url "ceremony/contributions/$PREV_PATH/$filename" GET)
         echo -n "    \"$filename\": \"$ph2_url\""
-
-        # Check if evals file exists
-        if [[ -d "../contributions/$PREV_PATH" ]]; then
-            # Local check
-            [[ -f "../contributions/$PREV_PATH/$evals_file" ]] && {
-                echo ","
-                evals_url=$(generate_url "ceremony/contributions/$PREV_PATH/$evals_file" GET)
-                echo -n "    \"$evals_file\": \"$evals_url\""
-            }
-        else
-            # GCS check
-            gsutil ls "gs://$BUCKET/ceremony/contributions/$PREV_PATH/$evals_file" >/dev/null 2>&1 && {
-                echo ","
-                evals_url=$(generate_url "ceremony/contributions/$PREV_PATH/$evals_file" GET)
-                echo -n "    \"$evals_file\": \"$evals_url\""
-            }
-        fi
     done
 
     echo ""
@@ -259,7 +240,6 @@ echo "Generating download URLs..."
 
         # Generate new filenames
         new_filename="${circuit}_${CONTRIBUTOR}_contribution_${NEXT_NUM}.ph2"
-        new_evals="${circuit}_${CONTRIBUTOR}_contribution_${NEXT_NUM}.evals"
 
         # Add comma if not first entry
         [[ "$FIRST" == "false" ]] && echo ","
@@ -274,11 +254,8 @@ echo "Generating download URLs..."
 
         # Generate and add upload URLs
         ph2_upload_url=$(generate_url "$upload_dest/$new_filename" PUT)
-        evals_upload_url=$(generate_url "$upload_dest/$new_evals" PUT)
 
         echo -n "    \"$new_filename\": \"$ph2_upload_url\""
-        echo ","
-        echo -n "    \"$new_evals\": \"$evals_upload_url\""
     done
 
     # Add upload URLs for hash and attestation files
