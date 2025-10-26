@@ -12,7 +12,7 @@ cd contributor
 
 3. When you're done, delete the files and wipe RAM — eg by shutting down machine and disconnecting from power.
 
-#### Verify contributions (recommended)
+#### Verify your contribution (recommended)
 
 Steps:
 
@@ -37,22 +37,41 @@ echo "Coordinator's SHA256: <paste here>"
 
 If your presigned read-access URLs have expired, reach out via DM or on Discord.
 
-Attest your contribution:
+**Publish your attestation (strongly recommended):**
 
 ```bash
-# The contributor script prints and writes hashes to this file
+# The contributor script saves your hashes to this file
 HASH_FILE=contributor/ceremony_contribution_*/output/contribution_hashes.txt
 
-# Keep a local copy and optionally publish a public attestation:
-# 1) Create a GitHub Gist and share the link; or
-# 2) Open a PR adding the file under attestations/<your_contribution_id>/; or
-# 3) Publish the file hash:
+# Option 1 (Recommended): Open a PR to this repo
+mkdir -p attestations/<your_contribution_id>
+cp $HASH_FILE attestations/<your_contribution_id>/
+git add attestations/<your_contribution_id>/
+git commit -m "Add attestation for <your_contribution_id>"
+# Open PR to https://github.com/lightprotocol/bmt-setup-ceremony
+
+# Option 2: Create a GitHub Gist and share the link
+
+# Option 3: Publish the SHA256 hash publicly
 shasum -a 256 $HASH_FILE
 ```
 
-### How to verify existing contributions
+### Verify the entire ceremony chain
 
-\*tba
+Anyone can verify all contributions in the ceremony:
+
+```bash
+git clone https://github.com/lightprotocol/bmt-setup-ceremony
+cd bmt-setup-ceremony
+
+# Verify all contributions (downloads from GCS, requires read access)
+./verify_chain.sh
+
+# Or verify up to a specific contribution
+./verify_chain.sh light-protocol-proving-keys 0003_swen
+```
+
+This script:
 
 ### For Coordinators
 
@@ -141,10 +160,13 @@ contributor/
 
 ## Circuits
 
-- **89 total circuits**
+- **101 total circuits**
 
   - V1: 30 circuits (tree height 26)
-  - V2: 56 circuits (tree heights 32/40)
+  - V2: 68 circuits (tree heights 32/40)
+    - 16 combined (inclusion 1-4, non-inclusion 1-4)
+    - 20 inclusion (accounts 1-20)
+    - 32 non-inclusion (accounts 1-32)
   - Batch: 3 circuits (batch operations)
 
 - **PTAU sizes**

@@ -65,17 +65,60 @@ for ver in v1 v2 batch; do
     [[ -f "$f" ]] || continue
     total=$((total + 1))
     base=$(basename "$f" .ph2)
-    circuit=$(echo "$base" | sed -E 's/(_0000|_[^_]+_contribution_[0-9]+)$//')
-    initial="$INITIAL_DIR/$ver/${circuit}_0000.ph2"
+
+    circuit=""
+    initial=""
+
+    if [[ "$ver" == "v1" ]]; then
+      # v1 contributors: v1_[type]_[combination]_[name]_contribution_[XXXX]
+      if [[ "$base" =~ ^v1_(.+)_[^_]+_contribution_([0-9]{4})$ ]]; then
+        type_comb="${BASH_REMATCH[1]}"
+        circuit="v1_${type_comb}"
+        initial="$INITIAL_DIR/v1/${circuit}_0000.ph2"
+      else
+        echo "FAIL: $base - invalid filename for v1. Expected v1_[type]_[combination]_[name]_contribution_XXXX"
+        failed=$((failed + 1))
+        continue
+      fi
+    elif [[ "$ver" == "v2" ]]; then
+      # v2 contributors: [type]_[combination]_[name]_contribution_[XXXX] (no v1/v2_ prefix)
+      if [[ "$base" == v1_* || "$base" == v2_* ]]; then
+        echo "FAIL: $base - invalid prefix for v2. No v1_/v2_ prefix allowed"
+        failed=$((failed + 1))
+        continue
+      fi
+      if [[ "$base" =~ ^(.+)_[^_]+_contribution_([0-9]{4})$ ]]; then
+        type_comb="${BASH_REMATCH[1]}"
+        circuit="$type_comb"
+        initial="$INITIAL_DIR/v2/${circuit}_initial_contribution_0.ph2"
+      else
+        echo "FAIL: $base - invalid filename for v2. Expected [type]_[combination]_[name]_contribution_XXXX"
+        failed=$((failed + 1))
+        continue
+      fi
+    elif [[ "$ver" == "batch" ]]; then
+      # batch contributors: [type]_[combination]_[name]_contribution_[XXXX]
+      if [[ "$base" =~ ^(.+)_[^_]+_contribution_([0-9]{4})$ ]]; then
+        type_comb="${BASH_REMATCH[1]}"
+        circuit="$type_comb"
+        initial="$INITIAL_DIR/batch/${circuit}_initial_contribution_0.ph2"
+      else
+        echo "FAIL: $base - invalid filename for batch. Expected [type]_[combination]_[name]_contribution_XXXX"
+        failed=$((failed + 1))
+        continue
+      fi
+    fi
+
     if [[ ! -f "$initial" ]]; then
-      echo "SKIP: $circuit (initial not found: $initial)"
+      echo "FAIL: $circuit - initial not found: $initial"
       failed=$((failed + 1))
       continue
     fi
+
     if "$SEMAPHORE_BIN" p2v "$f" "$initial" >/dev/null 2>&1; then
       echo "PASS: $circuit"
     else
-      echo "FAIL: $circuit"
+      echo "FAIL: $circuit - verification failed"
       failed=$((failed + 1))
     fi
 
